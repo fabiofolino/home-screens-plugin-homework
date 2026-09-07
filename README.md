@@ -1,44 +1,115 @@
-# Home Screens Homework Plugin
+# FAB Homework for Home Screens
 
-Home Screens plugin for displaying weekly homework from a JSON feed on a household dashboard.
+## v1.0.1 display-density update
 
-## Features
+- Compact density is now the default for wall displays.
+- Content auto-scales down as assignment/subject counts increase.
+- Default subject columns increased from 4 to 6 (supports up to 8).
+- Assignment details are line-clamped (default 2 lines) so one long item cannot push the rest off-screen.
+- Default Home Screens text size/padding reduced for better fit.
 
-- Subject-column layout optimized for wall displays
-- Chronological and due-soon layouts
-- Compact typography and adaptive density
-- Due-date highlighting for overdue, today, and tomorrow
-- Optional assignment details and weekly notes
-- Local-network JSON feed support through Home Screens `pluginFetch`
+Existing module instances may retain their Home Screens Style values. If an existing instance still looks large, set **Style > Text size** to about **12–14** and **Padding** to about **8–10**, or remove/re-add the module after reloading v1.0.1.
 
-## Default feed
+A Home Screens plugin that renders the weekly homework JSON feed used by the family dashboard. This release defaults to the 5th-grade feed, but the feed URL is configurable per module instance.
 
-This build is configured for the 5th-grade feed at:
+## Existing feed contract
+
+The plugin expects the same JSON produced by the existing CT106/Hermes homework workflow:
+
+```json
+{
+  "title": "Weekly Homework",
+  "weekLabel": "September 7–11",
+  "weekStart": "2026-09-07",
+  "weekEnd": "2026-09-11",
+  "generatedAt": "2026-09-07T16:30:00-04:00",
+  "items": [
+    {
+      "class": "Math",
+      "assignment": "Lesson 2 practice",
+      "details": "Complete problems 1–18.",
+      "due": "Tuesday",
+      "dueDate": "2026-09-08",
+      "source": "WAAG"
+    }
+  ],
+  "notes": []
+}
+```
+
+Default feed URL:
 
 `http://192.168.0.42:8787/homework-5th.json`
 
-The feed URL is configurable per module instance in the Home Screens editor.
+The feed request goes through Home Screens' `pluginFetch` proxy. The manifest declares both `network` and `localNetwork`, and allows the CT106 address `192.168.0.42`.
 
-## Home Screens requirements
+## Views
 
-- Home Screens 1.12.0 or newer
-- Permissions: `network`, `localNetwork`
+- **Subject columns** — the MagicMirror-style horizontal subject layout.
+- **Chronological list** — all assignments sorted by due date.
+- **Due soon** — overdue/today/tomorrow only; if none are urgent, shows the next five assignments.
 
-## Development
+## Configurable options
 
-Serve the repository root on port 5173 and load it from Home Screens → Plugins → Developer.
+- Feed URL
+- Refresh interval
+- Layout
+- Maximum assignments
+- Maximum subject columns
+- Show/hide details
+- Show/hide due date
+- Show/hide generated timestamp
+- Show/hide weekly notes
+- Hide past-due work
+- Highlight overdue/today/tomorrow
 
-Because Home Screens' CSP allows developer plugin connections from `http://localhost:*`, remote development may require an SSH tunnel from the browser machine.
+The normal Home Screens Style panel controls font, text color, background, opacity, blur, padding, border, radius, and shadow.
 
-## Installation
+## Quick local test on the Home Screens LXC
 
-For a permanent installation, publish `fab-homework-1.0.1.tar.gz` as a GitHub Release asset and use Home Screens → Plugins → Browse → Install from URL.
+The source package already contains a built `dist/bundle.js`, so you can test without npm:
 
-The release archive must contain exactly one top-level directory with at least:
+```bash
+cd fab-homework-plugin
+python3 dev-server.py
+```
 
-- `manifest.json`
-- `dist/bundle.js`
+In Home Screens, enable Advanced Mode if needed, then open **Plugins > Developer** and load:
 
-## License
+`http://localhost:5173`
 
-MIT
+When the dev server runs on CT107, tunnel it to the Windows browser if needed:
+
+```powershell
+ssh -N -L 5173:127.0.0.1:5173 homescreens@192.168.0.44
+```
+
+## Development / rebuilding
+
+```bash
+cd fab-homework-plugin
+npm install
+npm run build
+```
+
+For a production build:
+
+```bash
+npm install
+npm run build
+```
+
+The build output is `dist/bundle.js`.
+
+## Installing a packaged release
+
+Home Screens external installs expect an HTTPS tarball URL. The included `fab-homework-1.0.1.tar.gz` package has the required single top-level folder containing `manifest.json` and `dist/bundle.js`. Upload that tarball to a GitHub Release (or another HTTPS location), then use **Plugins > Install from URL**.
+
+## Changing the homework server address
+
+`pluginFetch` checks the manifest's `allowedDomains`. If CT106 moves from `192.168.0.42`, update both:
+
+1. `defaultConfig.feedUrl`
+2. `allowedDomains`
+
+Then rebuild/repackage the plugin.
